@@ -6,6 +6,10 @@
 #' @param datetime POSIXct vector, corresponding to the exposure measurement timestamps.
 #' @param exposure Exposure measurements.
 #' @param threshold Numeric threshold to be considered, in the same unit as the exposure.
+#'  Could be either one of the following:
+#'  - A constant threshold for the whole period.
+#'  - An hourly threshold, for each `datetime`.
+#'  - A daily threshold.
 #' @param steps interpolation data points for each day, default to 100
 #'
 #' @return Cumulative daily exposure above the referred threshold (numeric).
@@ -50,6 +54,10 @@ haat <- function(datetime, exposure, threshold, steps=100) {
     stop("`datetime` is an interrupted time series (one or more days are missing)", call. = FALSE)
   }
 
+  if (length(threshold) != 1 & length(threshold) != length(dates) & length(threshold) != length(datetime)) {
+    stop("`threshold` should be of length 1 or the same length as the following: `datetime` or `dates`)", call. = FALSE)
+  }
+
   dates_count <- table(dates)
 
   n_3 <- sum(dates_count < 3)
@@ -82,6 +90,13 @@ haat <- function(datetime, exposure, threshold, steps=100) {
   date_out <- as.Date(format(datetime_out, "%Y-%m-%d"))
   x_min <- as.numeric(lubridate::ymd_h(paste0(date_out, " 0"), tz=lubridate::tz(datetime)))
   hora_out <- (interp$x - x_min )/3600
+
+  if (length(threshold) == length(datetime)) {
+    threshold <- threshold[findInterval(xout, x)]
+  } else if (length(threshold) == length(dates)) {
+    threshold <- threshold[findInterval(xout, as.numeric(ymd_h(paste0(dates, " 0"))))]
+  }
+
   y_above <- pmax(0, interp$y - threshold)
 
   r <- rle(as.numeric(date_out))
