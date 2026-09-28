@@ -24,7 +24,7 @@
 #' )
 #'
 #' @export
-haat <- function(datetime, exposure, threshold, steps=100) {
+haat <- function(datetime, exposure, threshold, steps=100, minimal_measurements = 6) {
 
   # Checks
 
@@ -50,36 +50,31 @@ haat <- function(datetime, exposure, threshold, steps=100) {
 
   dates <- as.Date(format(datetime, "%Y-%m-%d"))
 
-  if(any(as.numeric(dates - lag(dates)) >= 2, na.rm=T)) {
-    stop("`datetime` is an interrupted time series (one or more days are missing)", call. = FALSE)
-  }
-
   if (length(threshold) != 1 & length(threshold) != length(dates) & length(threshold) != length(datetime)) {
     stop("`threshold` should be of length 1 or the same length as the following: `datetime` or `dates`)", call. = FALSE)
   }
 
-  dates_count <- table(dates)
-
-  n_3 <- sum(dates_count < 3)
-  n_6 <- sum(dates_count < 6)
-  n_12 <- sum(dates_count < 12)
-
-  if (n_3 > 0) {
-    warning(paste0(n_3, " dates in the time series with less than three measurements in a day."))
+  if (minimal_measurements < 3) {
+    minimal_measurements <- 3
+    warning("`minimal_measurements` set to 3. dates with fewer than 3 measurements cannot be considered.")
   }
 
-  if (n_6 > 0) {
-    warning(paste0(n_6, " dates in the time series with less than three measurements in a day."))
-  }
+  # for the whole period
+  dates <- factor(
+    dates,
+    levels = seq(min(dates), max(dates), by=1)
+  )
 
-  if (n_12 > 0) {
-    warning(paste0(n_12, " dates in the time series with less than three measurements in a day."))
-  }
+  unique_dates <- levels(dates)
+  first_date <- as.Date(unique_dates[1])
+  last_date <- as.Date(unique_dates[length(unique_dates)])
+
+  dates_count_non_na <- table(dates[!is.na(exposure)])
 
   xout <- as.numeric(seq(
-    lubridate::ymd_h(paste0(min(dates), "-0"), tz=lubridate::tz(datetime)),
-    lubridate::ymd_h(paste0(max(dates) + 1, " -0"), tz=lubridate::tz(datetime)) - lubridate::hours(1),
-    length.out = steps*as.numeric(max(dates) - min(dates) + 1)
+    lubridate::ymd_h(paste0(first_date, "-0"), tz=lubridate::tz(datetime)),
+    lubridate::ymd_h(paste0(last_date + 1, " -0"), tz=lubridate::tz(datetime)) - lubridate::hours(1),
+    length.out = steps*as.numeric(last_date - first_date + 1)
   ))
 
   x <- as.numeric(datetime)
@@ -88,13 +83,15 @@ haat <- function(datetime, exposure, threshold, steps=100) {
 
   datetime_out <- as.POSIXct(interp$x, origin="1970-01-01", tz=lubridate::tz(datetime))
   date_out <- as.Date(format(datetime_out, "%Y-%m-%d"))
-  x_min <- as.numeric(lubridate::ymd_h(paste0(date_out, " 0"), tz=lubridate::tz(datetime)))
+  x_min <- as.numeric(lubridate::floor_date(lubridate::ymd_h(paste0(date_out, " 12"), tz=lubridate::tz(datetime)), unit = "day"))
   hora_out <- (interp$x - x_min )/3600
 
   if (length(threshold) == length(datetime)) {
     threshold <- threshold[findInterval(xout, x)]
   } else if (length(threshold) == length(dates)) {
-    threshold <- threshold[findInterval(xout, as.numeric(lubridate::ymd_h(paste0(dates, " 0"))))]
+    threshold <- threshold[findInterval(xout,
+                                        as.numeric(lubridate::floor_date(lubridate::ymd_h(paste0(dates, " 12"), tz=lubridate::tz(datetime)), unit = "day"))
+                                        )]
   }
 
   y_above <- pmax(0, interp$y - threshold)
@@ -109,6 +106,17 @@ haat <- function(datetime, exposure, threshold, steps=100) {
     starts,
     ends
   )
+
+  if (sum(dates_count_non_na > minimal_measurements) > 0) {
+    warning(
+        sprintf("%d dates with less valid measurements than minimal (%d) being set to NA.\nYou can switch the `minimal_measurements` argument.",
+                sum(dates_count_non_na > minimal_measurements),
+                minimal_measurements
+        )
+    )
+  }
+
+  auc_results <- unname(ifelse(dates_count_non_na > minimal_measurements, auc_results, NA))
 
   data.frame(
     date=unique(date_out),
