@@ -36,8 +36,8 @@ haat <- function(datetime, exposure, threshold, steps=100) {
     stop("`exposure` must be numeric.", call. = FALSE)
   }
 
-  if (!is.numeric(threshold) || length(threshold) != 1L) {
-    stop("HAAT `threshold` must be a single numeric value.", call. = FALSE)
+  if (!is.numeric(threshold)) {
+    stop("HAAT `threshold` must be a numeric value.", call. = FALSE)
   }
 
   if (length(datetime) != length(exposure)) {
@@ -94,7 +94,7 @@ haat <- function(datetime, exposure, threshold, steps=100) {
   if (length(threshold) == length(datetime)) {
     threshold <- threshold[findInterval(xout, x)]
   } else if (length(threshold) == length(dates)) {
-    threshold <- threshold[findInterval(xout, as.numeric(ymd_h(paste0(dates, " 0"))))]
+    threshold <- threshold[findInterval(xout, as.numeric(lubridate::ymd_h(paste0(dates, " 0"))))]
   }
 
   y_above <- pmax(0, interp$y - threshold)
