@@ -1,18 +1,30 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# `{haat}` - heat area above a threshold
+# `{haat}` - cumulative environmental exposures above a threshold
 
 [![Preprint](https://img.shields.io/badge/medRxiv-Preprint-orange)](https://doi.org/10.64898/2026.08.26.26361449)
 
-`{haat}` is a R package that
+`{haat}` is an R function to calculate cumulative exposure areas above a
+pre-defined threshold based on hourly observations. The function
+approximates the exposure curve for each day and uses `flux::auc()` to
+calculate the area under the curve. These cumulative metrics consider
+both the exposure intensity and its persistence throughout the day -
+which may better represent environmental exposures than traditional
+summary metrics.
 
 ## Installation
 
-You can install the development version of `{RioHeatDashboard}` like so:
+This package can be installed or sourced.
 
 ``` r
 remotes::install_github("joaohmorais/haat")
+```
+
+Or:
+
+``` r
+source("https://raw.githubusercontent.com/joaohmorais/haat/refs/heads/master/R/haat.R")
 ```
 
 ## Examples
@@ -23,7 +35,7 @@ This README has been compiled on the
 
 ``` r
 Sys.time()
-#> [1] "2026-09-17 16:01:09 -03"
+#> [1] "2026-09-28 17:12:22 -03"
 ```
 
 ## References
