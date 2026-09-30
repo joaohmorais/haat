@@ -24,7 +24,7 @@
 #' )
 #'
 #' @export
-haat <- function(datetime, exposure, threshold, steps=100, minimal_measurements = 6) {
+haat <- function(datetime, exposure, threshold, steps=100, minimal_measurements = 6, type="linear") {
 
   # Checks
 
@@ -102,7 +102,7 @@ haat <- function(datetime, exposure, threshold, steps=100, minimal_measurements 
   ends   <- cumsum(r$lengths)
 
   auc_results <- mapply(
-    function(s, e) flux::auc(hora_out[s:e], y_above[s:e]),
+    function(s, e) MESS::auc(hora_out[s:e], y_above[s:e], type = type),
     starts,
     ends
   )
